@@ -3,7 +3,6 @@ package com.example.android.pets;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -12,12 +11,10 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.TextView;
+import android.widget.ListView;
 import android.widget.Toast;
 
-import com.example.android.pets.data.PetContract;
 import com.example.android.pets.data.PetContract.PetEntry;
-import com.example.android.pets.data.PetDBHelper;
 
 /**
  * Displays list of pets that were entered and stored in the app.
@@ -58,10 +55,8 @@ public class CatalogActivity extends AppCompatActivity
 
     private void displayDatabaseInfo()
     {
-
         // Define a projection that specifies which columns from the database
         // you will actually use after this query.
-
          String[] projection = {
                  PetEntry._ID,
                  PetEntry.COLUMN_PET_NAME,
@@ -82,27 +77,19 @@ public class CatalogActivity extends AppCompatActivity
                 PetEntry.CONTENT_URI,  // fill our uri
                 projection, null, null, null );
 
-        try {
-            // Display the number of rows in the Cursor (which reflects the number of rows in the
-            // pets table in the database).
-            TextView displayView = (TextView) findViewById(R.id.text_view_pet);
-            displayView.setText("There are " + cursor.getCount() + " pets in the database.\n\n");
 
-            while (cursor.moveToNext() )
-            {
-                displayView.append(cursor.getString(0) + ": ");
-                displayView.append(cursor.getString(1) + " - ");
-                displayView.append(cursor.getString(2) + " - ");
-                displayView.append(cursor.getString(3) + " - ");
-                displayView.append(cursor.getString(4) + "\n");
+        ListView myListView = (ListView) findViewById(R.id.pet_listview);
 
-            }
+        //myListView.setEmptyView(findViewById(R.id.empty_view));
+        View emptyView = findViewById(R.id.empty_view);
+        myListView.setEmptyView(emptyView);
 
-        } finally {
-            // Always close the cursor when you're done reading from it. This releases all its
-            // resources and makes it invalid.
-            cursor.close();
-        }
+        PetCursorAdapter myAdapter = new PetCursorAdapter(this, cursor);
+
+        myListView.setAdapter(myAdapter);
+
+
+
     }
 
     @Override

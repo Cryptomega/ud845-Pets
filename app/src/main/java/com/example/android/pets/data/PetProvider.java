@@ -143,6 +143,7 @@ public class PetProvider extends ContentProvider
             Log.e(LOG_TAG,"Failed to insert row for " + uri);
             return null;
         }
+
         return ContentUris.withAppendedId(uri,newRowId);
     }
 
