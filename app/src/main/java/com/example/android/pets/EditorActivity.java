@@ -15,10 +15,15 @@
  */
 package com.example.android.pets;
 
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,11 +31,17 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.Toast;
+
+import com.example.android.pets.data.PetContract;
+import com.example.android.pets.data.PetDBHelper;
 
 /**
  * Allows user to create a new pet or edit an existing one.
  */
-public class EditorActivity extends AppCompatActivity {
+public class EditorActivity extends AppCompatActivity
+{
+
 
     /** EditText field to enter the pet's name */
     private EditText mNameEditText;
@@ -62,6 +73,9 @@ public class EditorActivity extends AppCompatActivity {
         mGenderSpinner = (Spinner) findViewById(R.id.spinner_gender);
 
         setupSpinner();
+
+
+
     }
 
     /**
@@ -86,11 +100,11 @@ public class EditorActivity extends AppCompatActivity {
                 String selection = (String) parent.getItemAtPosition(position);
                 if (!TextUtils.isEmpty(selection)) {
                     if (selection.equals(getString(R.string.gender_male))) {
-                        mGender = 1; // Male
+                        mGender = PetContract.PetEntry.GENDER_MALE; // Male
                     } else if (selection.equals(getString(R.string.gender_female))) {
-                        mGender = 2; // Female
+                        mGender = PetContract.PetEntry.GENDER_FEMALE; // Female
                     } else {
-                        mGender = 0; // Unknown
+                        mGender = PetContract.PetEntry.GENDER_UNKONWN; // Unknown
                     }
                 }
             }
@@ -117,7 +131,10 @@ public class EditorActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             // Respond to a click on the "Save" menu option
             case R.id.action_save:
-                // Do nothing for now
+                savePetToDb();
+                finish();
+                //Intent intent = new Intent(this, CatalogActivity.class);
+                //startActivity(intent);
                 return true;
             // Respond to a click on the "Delete" menu option
             case R.id.action_delete:
@@ -130,5 +147,44 @@ public class EditorActivity extends AppCompatActivity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void savePetToDb()
+    {
+        PetDBHelper mDbHelper = new PetDBHelper(this);
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+
+        Integer weight = 0;
+        try { weight = Integer.parseInt(mWeightEditText.getText().toString().trim()); }
+        catch(Exception ex) {}
+
+        ContentValues values = new ContentValues();
+        values.put(PetContract.PetEntry.COLUMN_PET_NAME, mNameEditText.getText().toString().trim());
+        values.put(PetContract.PetEntry.COLUMN_PET_BREED, mBreedEditText.getText().toString().trim());
+        values.put(PetContract.PetEntry.COLUMN_PET_GENDER, mGender);
+        values.put(PetContract.PetEntry.COLUMN_PET_WEIGHT, weight);
+
+        long newRowId = -1;
+        newRowId = db.insert(PetContract.PetEntry.TABLE_NAME, null, values);
+
+        if ( newRowId == -1 ) // Insert failed
+        {
+            Log.v("EditorActivity", "db insert failed!");
+            Toast.makeText(this,"ERROR: Failed to add pet!",Toast.LENGTH_SHORT).show();
+        }
+        else
+        {
+            Log.v("EditorActivity", "Pet Added>ID:" + newRowId + " :" + mNameEditText.getText().toString()
+                    + "|" + mBreedEditText.getText().toString()
+                    + "|" + mGender
+                    + "|" + weight );
+
+            Toast.makeText(this,"Added Pet! ID: " + String.valueOf(newRowId),Toast.LENGTH_SHORT).show();
+            // CharSequence text = "Added Pet! ID: " + String.valueOf(newRowId);
+
+        }
+
+        // check Id
+        // Add toast message
     }
 }
