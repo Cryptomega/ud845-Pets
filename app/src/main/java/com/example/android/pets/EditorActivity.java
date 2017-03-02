@@ -19,6 +19,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.AppCompatActivity;
@@ -41,7 +42,8 @@ import com.example.android.pets.data.PetDBHelper;
  */
 public class EditorActivity extends AppCompatActivity
 {
-
+    /** Tag for the log messages */
+    public static final String LOG_TAG = "PETSAPP/" + EditorActivity.class.getSimpleName();
 
     /** EditText field to enter the pet's name */
     private EditText mNameEditText;
@@ -131,8 +133,13 @@ public class EditorActivity extends AppCompatActivity
         switch (item.getItemId()) {
             // Respond to a click on the "Save" menu option
             case R.id.action_save:
-                savePetToDb();
-                finish();
+                try {
+                    savePetToDb();
+                    finish();;
+                } catch (Exception ex) {
+                    Toast.makeText(this,ex.getMessage(),Toast.LENGTH_SHORT).show();
+                    Log.e(LOG_TAG,ex.getMessage());
+                }
                 return true;
             // Respond to a click on the "Delete" menu option
             case R.id.action_delete:
@@ -149,11 +156,7 @@ public class EditorActivity extends AppCompatActivity
 
     private void savePetToDb()
     {
-        // TODO: Remove direct db interaction, replace with content provider
-        PetDBHelper mDbHelper = new PetDBHelper(this);
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-
-        Integer weight = 0;
+        int weight = 0;
         try { weight = Integer.parseInt(mWeightEditText.getText().toString().trim()); }
         catch(Exception ex) {}
 
@@ -163,25 +166,24 @@ public class EditorActivity extends AppCompatActivity
         values.put(PetContract.PetEntry.COLUMN_PET_GENDER, mGender);
         values.put(PetContract.PetEntry.COLUMN_PET_WEIGHT, weight);
 
-        long newRowId = -1;
-        newRowId = db.insert(PetContract.PetEntry.TABLE_NAME, null, values);
 
-        if ( newRowId == -1 ) // Insert failed
+        Uri newPetUri = getContentResolver().insert(PetContract.PetEntry.CONTENT_URI, values);
+
+        if ( newPetUri  == null ) // Insert failed
         {
-            Log.v("EditorActivity", "db insert failed!");
-            Toast.makeText(this,"ERROR: Failed to add pet!",Toast.LENGTH_SHORT).show();
+            Log.v(LOG_TAG, "db insert failed!");
+            Toast.makeText(this,R.string.editor_insert_pet_failed,Toast.LENGTH_SHORT).show();
         }
         else
         {
-            Log.v("EditorActivity", "Pet Added>ID:" + newRowId + " :" + mNameEditText.getText().toString()
-                    + "|" + mBreedEditText.getText().toString()
-                    + "|" + mGender
+            Log.v(LOG_TAG, "Pet Added>ID:" + newPetUri.getLastPathSegment()
+                    + " :'" + mNameEditText.getText().toString().trim()
+                    + "'|'" + mBreedEditText.getText().toString().trim()
+                    + "'|" + mGender
                     + "|" + weight );
 
-            Toast.makeText(this,"Added Pet! ID: " + String.valueOf(newRowId),Toast.LENGTH_SHORT).show();
-            // CharSequence text = "Added Pet! ID: " + String.valueOf(newRowId);
-
-        }
+            Toast.makeText(this,R.string.pet_saved,Toast.LENGTH_SHORT).show();
+         }
 
         // check Id
         // Add toast message

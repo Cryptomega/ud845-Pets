@@ -13,6 +13,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.android.pets.data.PetContract;
 import com.example.android.pets.data.PetContract.PetEntry;
@@ -23,7 +24,8 @@ import com.example.android.pets.data.PetDBHelper;
  */
 public class CatalogActivity extends AppCompatActivity
 {
-    // private PetDBHelper mDbHelper;
+    /** Tag for the log messages */
+    public static final String LOG_TAG = "PETSAPP/" + CatalogActivity.class.getSimpleName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -113,18 +115,17 @@ public class CatalogActivity extends AppCompatActivity
 
     private void insertPet()
     {
-        // TODO: remove or replace with content provider
-        //SQLiteDatabase db = mDbHelper.getWritableDatabase();
-
         ContentValues values = new ContentValues();
-        values.put(PetEntry.COLUMN_PET_NAME, "Toto");
+        values.put(PetEntry.COLUMN_PET_NAME, "Gregory");
         values.put(PetEntry.COLUMN_PET_BREED, "Terrier");
         values.put(PetEntry.COLUMN_PET_GENDER, PetEntry.GENDER_MALE);
-        values.put(PetEntry.COLUMN_PET_WEIGHT, 7);
+        values.put(PetEntry.COLUMN_PET_WEIGHT, 13);
 
         //long newRowId = db.insert(PetEntry.TABLE_NAME, null, values);
+        Uri newPetUri = getContentResolver().insert(PetEntry.CONTENT_URI,values);
 
-        //Log.v("CatalogueActivity", "New Row Id: " + newRowId);
+        Toast.makeText(this, R.string.pet_saved, Toast.LENGTH_SHORT).show();
+        Log.v("CatalogueActivity", "New Id: " + newPetUri.getLastPathSegment());
     }
 
     @Override

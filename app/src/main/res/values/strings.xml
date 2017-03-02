@@ -58,4 +58,10 @@
 
     <!-- Label for dropdown menu option if the pet is female [CHAR LIMIT=20] -->
     <string name="gender_female">Female</string>
+
+    <!-- Label for "Pet Saved" toast message   -->
+    <string name="pet_saved">Pet Saved!</string>
+
+    <!-- Label for "Pet Failed to save" toast message   -->
+    <string name="editor_insert_pet_failed">FAILED to add pet!</string>
 </resources>
