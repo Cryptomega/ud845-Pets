@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -14,13 +15,23 @@ import android.view.View;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
+//import android.support.v4.widget.SimpleCursorAdapter;
+
 import com.example.android.pets.data.PetContract.PetEntry;
 
 /**
  * Displays list of pets that were entered and stored in the app.
  */
-public class CatalogActivity extends AppCompatActivity
+public class CatalogActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>
 {
+    // loader ID
+    private static final int URI_LOADER = 0;
+
+    PetCursorAdapter myAdapter;
+
     /** Tag for the log messages */
     public static final String LOG_TAG = "PETSAPP/" + CatalogActivity.class.getSimpleName();
 
@@ -40,19 +51,33 @@ public class CatalogActivity extends AppCompatActivity
             }
         });
 
-        //mDbHelper = new PetDBHelper(this);
+        // get ListView
+        ListView myListView = (ListView) findViewById(R.id.pet_listview);
 
-        displayDatabaseInfo();
+        // Set empty view
+        myListView.setEmptyView(findViewById(R.id.empty_view));
+
+        // initialize PetCursorAdapter
+        myAdapter = new PetCursorAdapter(this, null);
+
+        // connect ListView to PetCursorAdapter
+        myListView.setAdapter(myAdapter);
+
+        // initialize loader
+        //getLoaderManager().initLoader(URI_LOADER, null, (android.app.LoaderManager.LoaderCallbacks<Cursor>) this);
+        getSupportLoaderManager().initLoader(URI_LOADER, null, this);
+
 
     }
 
     @Override
-    public void onStart( )
+    public void onStart()
     {
         super.onStart();
-        displayDatabaseInfo();
+        //displayDatabaseInfo();
     }
 
+    /*   // ******* OLD DISPLAY CODE
     private void displayDatabaseInfo()
     {
         // Define a projection that specifies which columns from the database
@@ -78,19 +103,19 @@ public class CatalogActivity extends AppCompatActivity
                 projection, null, null, null );
 
 
+        // get ListView
         ListView myListView = (ListView) findViewById(R.id.pet_listview);
 
-        //myListView.setEmptyView(findViewById(R.id.empty_view));
-        View emptyView = findViewById(R.id.empty_view);
-        myListView.setEmptyView(emptyView);
+        // Set empty view
+        myListView.setEmptyView(findViewById(R.id.empty_view));
 
-        PetCursorAdapter myAdapter = new PetCursorAdapter(this, cursor);
+        // connect PetCursorAdapter to cursor
+        myAdapter = new PetCursorAdapter(this, cursor);
 
+        // connect ListView to PetCursorAdapter
         myListView.setAdapter(myAdapter);
-
-
-
     }
+    */
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -123,7 +148,7 @@ public class CatalogActivity extends AppCompatActivity
             case R.id.action_insert_dummy_data:
                 // Do nothing for now
                 insertPet();
-                displayDatabaseInfo();
+                //displayDatabaseInfo();
                 return true;
             // Respond to a click on the "Delete all entries" menu option
             case R.id.action_delete_all_entries:
@@ -132,4 +157,42 @@ public class CatalogActivity extends AppCompatActivity
         }
         return super.onOptionsItemSelected(item);
     }
+
+
+    /* *********************************************
+        ***** LOADER CALLBACK METHODS **************
+       ********************************************* */
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args)
+    {
+        String[] projection = {
+                PetEntry._ID,
+                PetEntry.COLUMN_PET_NAME,
+                PetEntry.COLUMN_PET_BREED,
+                PetEntry.COLUMN_PET_GENDER,
+                PetEntry.COLUMN_PET_WEIGHT   };
+        switch (id)
+        {
+            case URI_LOADER:
+                return new CursorLoader(this, PetEntry.CONTENT_URI, projection, null, null, null);
+            default:
+                return null;
+        }
+    }
+
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor)
+    {
+        myAdapter.changeCursor(cursor);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader)
+    {
+        myAdapter.changeCursor(null);
+    }
+    /* *********************************************
+        ***** END LOADER CALLBACK METHODS **********
+         ********************************************* */
 }
