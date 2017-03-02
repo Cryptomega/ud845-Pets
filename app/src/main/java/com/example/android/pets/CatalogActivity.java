@@ -23,7 +23,7 @@ import com.example.android.pets.data.PetDBHelper;
  */
 public class CatalogActivity extends AppCompatActivity
 {
-    private PetDBHelper mDbHelper;
+    // private PetDBHelper mDbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -41,7 +41,7 @@ public class CatalogActivity extends AppCompatActivity
             }
         });
 
-        mDbHelper = new PetDBHelper(this);
+        //mDbHelper = new PetDBHelper(this);
 
         displayDatabaseInfo();
 
@@ -84,7 +84,7 @@ public class CatalogActivity extends AppCompatActivity
             // Display the number of rows in the Cursor (which reflects the number of rows in the
             // pets table in the database).
             TextView displayView = (TextView) findViewById(R.id.text_view_pet);
-            displayView.setText("Number of pets: " + cursor.getCount() + "\n\n");
+            displayView.setText("There are " + cursor.getCount() + " pets in the database.\n\n");
 
             while (cursor.moveToNext() )
             {
@@ -113,7 +113,8 @@ public class CatalogActivity extends AppCompatActivity
 
     private void insertPet()
     {
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        // TODO: remove or replace with content provider
+        //SQLiteDatabase db = mDbHelper.getWritableDatabase();
 
         ContentValues values = new ContentValues();
         values.put(PetEntry.COLUMN_PET_NAME, "Toto");
@@ -121,9 +122,9 @@ public class CatalogActivity extends AppCompatActivity
         values.put(PetEntry.COLUMN_PET_GENDER, PetEntry.GENDER_MALE);
         values.put(PetEntry.COLUMN_PET_WEIGHT, 7);
 
-        long newRowId = db.insert(PetEntry.TABLE_NAME, null, values);
+        //long newRowId = db.insert(PetEntry.TABLE_NAME, null, values);
 
-        Log.v("CatalogueActivity", "New Row Id: " + newRowId);
+        //Log.v("CatalogueActivity", "New Row Id: " + newRowId);
     }
 
     @Override

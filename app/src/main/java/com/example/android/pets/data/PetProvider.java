@@ -98,8 +98,23 @@ public class PetProvider extends ContentProvider
     // Insert new data into the provider with the given ContentValues.
     @Nullable
     @Override
-    public Uri insert(Uri uri, ContentValues values) {
-        return null;
+    public Uri insert(Uri uri, ContentValues values)
+    {
+        final int match = sUriMatcher.match((uri));
+        switch (match)
+        {
+            case PETS:
+                return insertPet(uri, values);
+            default:
+                throw new IllegalArgumentException("Insertion not supported for " + uri);
+        }
+    }
+
+    private Uri insertPet(Uri uri, ContentValues values)
+    {
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        long newRowId = db.insert(PetEntry.TABLE_NAME, null, values);
+        return ContentUris.withAppendedId(uri,newRowId);
     }
 
     // * Delete the data at the given selection and selection arguments.

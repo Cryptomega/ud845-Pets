@@ -149,6 +149,7 @@ public class EditorActivity extends AppCompatActivity
 
     private void savePetToDb()
     {
+        // TODO: Remove direct db interaction, replace with content provider
         PetDBHelper mDbHelper = new PetDBHelper(this);
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
 
