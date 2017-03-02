@@ -1,14 +1,18 @@
 package com.example.android.pets.data;
 
 import android.content.ContentProvider;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.annotation.Nullable;
 
-import com.example.android.pets.data.PetContract;
 
+import com.example.android.pets.data.PetContract.PetEntry;
+
+import static android.content.ContentUris.parseId;
 
 
 /**
@@ -43,8 +47,44 @@ public class PetProvider extends ContentProvider
     // Perform the query for the given URI. Use the given projection, selection, selection arguments, and sort order.
     @Nullable
     @Override
-    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-        return null;
+    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder)
+    {
+        // Get readable SQL database
+        SQLiteDatabase db = mDbHelper.getReadableDatabase();
+
+        Cursor cursor;
+
+        int match = sUriMatcher.match(uri);
+        switch (match)
+        {
+            case PETS:
+                cursor = db.query(
+                        PetEntry.TABLE_NAME,            // The table to query
+                        projection,                     // The columns to return
+                        selection,                      // The columns for the WHERE clause
+                        selectionArgs,                  // The values for the WHERE clause
+                        null,                           // don't group the rows
+                        null,                         // don't filter by row groups
+                        sortOrder  );
+                break;
+            case PET_ID:
+                // perform query
+                selection = PetEntry._ID + " =?";
+                selectionArgs = new String[] { String.valueOf(ContentUris.parseId(uri)) };
+                cursor = db.query(
+                        PetEntry.TABLE_NAME,            // The table to query
+                        projection,                     // The columns to return
+                        selection,                      // The columns for the WHERE clause
+                        selectionArgs,                  // The values for the WHERE clause
+                        null,                           // don't group the rows
+                        null,                         // don't filter by row groups
+                        sortOrder  );
+                break;
+            default:
+                throw new IllegalArgumentException("Cannot query unknown uri");
+        }
+
+        return cursor;
     }
 
     //  * Returns the MIME type of data for the content URI.

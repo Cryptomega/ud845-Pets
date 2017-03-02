@@ -133,8 +133,6 @@ public class EditorActivity extends AppCompatActivity
             case R.id.action_save:
                 savePetToDb();
                 finish();
-                //Intent intent = new Intent(this, CatalogActivity.class);
-                //startActivity(intent);
                 return true;
             // Respond to a click on the "Delete" menu option
             case R.id.action_delete:
