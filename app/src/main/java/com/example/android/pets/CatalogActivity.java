@@ -1,5 +1,6 @@
 package com.example.android.pets;
 
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
@@ -12,6 +13,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -28,7 +30,7 @@ import com.example.android.pets.data.PetContract.PetEntry;
 public class CatalogActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>
 {
     // loader ID
-    private static final int URI_LOADER = 0;
+    private static final int PET_LOADER = 0;
 
     PetCursorAdapter myAdapter;
 
@@ -57,15 +59,28 @@ public class CatalogActivity extends AppCompatActivity implements LoaderManager.
         // Set empty view
         myListView.setEmptyView(findViewById(R.id.empty_view));
 
-        // initialize PetCursorAdapter
+        // initialize PetCursorAdapter with null cursor
         myAdapter = new PetCursorAdapter(this, null);
 
         // connect ListView to PetCursorAdapter
         myListView.setAdapter(myAdapter);
 
+        // setup item click listener
+        myListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                // create intent to open Editor Activity
+                Intent intent = new Intent(CatalogActivity.this, EditorActivity.class);
+                // Add URI itentifing entry to edit
+                intent.setData(ContentUris.withAppendedId(PetEntry.CONTENT_URI, id));
+                // launch the activity
+                startActivity(intent);
+            }
+        });
+
         // initialize loader
-        //getLoaderManager().initLoader(URI_LOADER, null, (android.app.LoaderManager.LoaderCallbacks<Cursor>) this);
-        getSupportLoaderManager().initLoader(URI_LOADER, null, this);
+        //getLoaderManager().initLoader(PET_LOADER, null, (android.app.LoaderManager.LoaderCallbacks<Cursor>) this);
+        getSupportLoaderManager().initLoader(PET_LOADER, null, this);
 
 
     }
@@ -77,45 +92,6 @@ public class CatalogActivity extends AppCompatActivity implements LoaderManager.
         //displayDatabaseInfo();
     }
 
-    /*   // ******* OLD DISPLAY CODE
-    private void displayDatabaseInfo()
-    {
-        // Define a projection that specifies which columns from the database
-        // you will actually use after this query.
-         String[] projection = {
-                 PetEntry._ID,
-                 PetEntry.COLUMN_PET_NAME,
-                 PetEntry.COLUMN_PET_BREED,
-                 PetEntry.COLUMN_PET_GENDER,
-                 PetEntry.COLUMN_PET_WEIGHT   };
-
-        // Filter results WHERE "title" = 'My Title'
-        // All rows, so no selection arguements
-        // String selection = FeedEntry.COLUMN_NAME_TITLE + " = ?";
-        // String[] selectionArgs = { "My Title" };
-
-        // How you want the results sorted in the resulting Cursor
-        //String sortOrder =
-        //        FeedEntry.COLUMN_NAME_SUBTITLE + " DESC";
-
-        Cursor cursor = getContentResolver().query(
-                PetEntry.CONTENT_URI,  // fill our uri
-                projection, null, null, null );
-
-
-        // get ListView
-        ListView myListView = (ListView) findViewById(R.id.pet_listview);
-
-        // Set empty view
-        myListView.setEmptyView(findViewById(R.id.empty_view));
-
-        // connect PetCursorAdapter to cursor
-        myAdapter = new PetCursorAdapter(this, cursor);
-
-        // connect ListView to PetCursorAdapter
-        myListView.setAdapter(myAdapter);
-    }
-    */
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -160,20 +136,20 @@ public class CatalogActivity extends AppCompatActivity implements LoaderManager.
 
 
     /* *********************************************
-        ***** LOADER CALLBACK METHODS **************
+        ** PET LOADER CALLBACK METHODS *************
        ********************************************* */
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args)
     {
-        String[] projection = {
-                PetEntry._ID,
-                PetEntry.COLUMN_PET_NAME,
-                PetEntry.COLUMN_PET_BREED,
-                PetEntry.COLUMN_PET_GENDER,
-                PetEntry.COLUMN_PET_WEIGHT   };
         switch (id)
         {
-            case URI_LOADER:
+            case PET_LOADER:
+                String[] projection = {
+                        PetEntry._ID,
+                        PetEntry.COLUMN_PET_NAME,
+                        PetEntry.COLUMN_PET_BREED,
+                        PetEntry.COLUMN_PET_GENDER,
+                        PetEntry.COLUMN_PET_WEIGHT   };
                 return new CursorLoader(this, PetEntry.CONTENT_URI, projection, null, null, null);
             default:
                 return null;

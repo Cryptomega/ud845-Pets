@@ -87,6 +87,9 @@ public class PetProvider extends ContentProvider
                 throw new IllegalArgumentException("Cannot query unknown uri");
         }
 
+        // Set notification URI in case content changes later
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+
         return cursor;
     }
 
@@ -144,6 +147,10 @@ public class PetProvider extends ContentProvider
             return null;
         }
 
+        // Notify all listeners that the data has changed
+        getContext().getContentResolver().notifyChange(uri, null);
+
+        // Return the new URI with ID of newly inserted row
         return ContentUris.withAppendedId(uri,newRowId);
     }
 
@@ -153,17 +160,27 @@ public class PetProvider extends ContentProvider
     {
         final int match = sUriMatcher.match(uri);
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        int rowsDeleted = 1;
         switch (match)
         {
             case PETS:
-                return db.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                rowsDeleted = db.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                break;
             case PET_ID:
                 selection = PetEntry._ID + "=?";
                 selectionArgs = new String[] { String.valueOf(ContentUris.parseId(uri)) };
-                return db.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                rowsDeleted =  db.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                break;
             default:
                 throw new IllegalArgumentException("Delete is not supported for " + uri);
         }
+        // Notify Liseners if the data has chaged
+        if ( rowsDeleted != 0)
+            getContext().getContentResolver().notifyChange(uri, null);
+
+
+        return rowsDeleted;
+
     }
 
 
@@ -175,6 +192,7 @@ public class PetProvider extends ContentProvider
         switch (match)
         {
             case PETS:
+
                 return updatePet(uri, values, selection, selectionArgs);
             case PET_ID:
                 // For the PET_ID code, extract out the ID from the URI,
@@ -220,6 +238,12 @@ public class PetProvider extends ContentProvider
 
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
 
-        return db.update(PetEntry.TABLE_NAME, values, selection, selectionArgs);
+        int rowsUpdated = db.update(PetEntry.TABLE_NAME, values, selection, selectionArgs);
+
+        // Notify all listeners that the data has changed
+        if (rowsUpdated != 0)
+            getContext().getContentResolver().notifyChange(uri, null);
+
+        return rowsUpdated;
     }
 }

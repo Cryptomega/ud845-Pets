@@ -17,16 +17,23 @@ package com.example.android.pets;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
 import android.support.v4.app.NavUtils;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -40,8 +47,21 @@ import com.example.android.pets.data.PetDBHelper;
 /**
  * Allows user to create a new pet or edit an existing one.
  */
-public class EditorActivity extends AppCompatActivity
+public class EditorActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>
 {
+    private static final int PET_FIELD_LOADER = 1;
+    private Uri intentUri;
+
+    private boolean mPetHasChanged = false;
+
+    private View.OnTouchListener mTouchListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            mPetHasChanged = true;
+            return false;
+        }
+    };
+
     /** Tag for the log messages */
     public static final String LOG_TAG = "PETSAPP/" + EditorActivity.class.getSimpleName();
 
@@ -68,6 +88,29 @@ public class EditorActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
 
+        // use getIntent() and getData() to get associated URI
+        // if URI includes pet to edit, set title to "Edit Pet"
+        // and populate fields
+        intentUri = null;
+        Intent intent = getIntent();
+        intentUri = intent.getData();
+
+        if  (intentUri == null)
+        {
+            // No intent, so we are adding a new pet
+            setTitle(R.string.editor_activity_title_new_pet);
+        }
+        else
+        {    // Launched with intent uri, so we are updating a pet
+            setTitle(R.string.editor_activity_title_edit_pet);
+
+            // Show URI in Toast message for debugging
+            Toast.makeText(this, intentUri.toString(), Toast.LENGTH_SHORT).show();
+
+            getSupportLoaderManager().initLoader(PET_FIELD_LOADER, null, this);
+
+        }
+
         // Find all relevant views that we will need to read user input from
         mNameEditText = (EditText) findViewById(R.id.edit_pet_name);
         mBreedEditText = (EditText) findViewById(R.id.edit_pet_breed);
@@ -76,8 +119,11 @@ public class EditorActivity extends AppCompatActivity
 
         setupSpinner();
 
-
-
+        // Listen for changes
+        mNameEditText.setOnTouchListener(mTouchListener);
+        mBreedEditText.setOnTouchListener(mTouchListener);
+        mWeightEditText.setOnTouchListener(mTouchListener);
+        mGenderSpinner.setOnTouchListener(mTouchListener);
     }
 
     /**
@@ -135,7 +181,7 @@ public class EditorActivity extends AppCompatActivity
             case R.id.action_save:
                 try {
                     savePetToDb();
-                    finish();;
+                    finish();
                 } catch (Exception ex) {
                     Toast.makeText(this,ex.getMessage(),Toast.LENGTH_SHORT).show();
                     Log.e(LOG_TAG,ex.getMessage());
@@ -147,8 +193,27 @@ public class EditorActivity extends AppCompatActivity
                 return true;
             // Respond to a click on the "Up" arrow button in the app bar
             case android.R.id.home:
-                // Navigate back to parent activity (CatalogActivity)
-                NavUtils.navigateUpFromSameTask(this);
+                // If the pet hasn't changed, continue with navigating up to parent activity
+                // which is the {@link CatalogActivity}.
+                if (!mPetHasChanged) {
+                    NavUtils.navigateUpFromSameTask(EditorActivity.this);
+                    return true;
+                }
+
+                // Otherwise if there are unsaved changes, setup a dialog to warn the user.
+                // Create a click listener to handle the user confirming that
+                // changes should be discarded.
+                DialogInterface.OnClickListener discardButtonClickListener =
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                // User clicked "Discard" button, navigate to parent activity.
+                                NavUtils.navigateUpFromSameTask(EditorActivity.this);
+                            }
+                        };
+
+                // Show a dialog that notifies the user they have unsaved changes
+                showUnsavedChangesDialog(discardButtonClickListener);
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -157,8 +222,10 @@ public class EditorActivity extends AppCompatActivity
     private void savePetToDb()
     {
         int weight = 0;
-        try { weight = Integer.parseInt(mWeightEditText.getText().toString().trim()); }
-        catch(Exception ex) {}
+        if ( !TextUtils.isEmpty( mWeightEditText.getText().toString() ))
+            weight = Integer.parseInt( mWeightEditText.getText().toString() );
+        //try { weight = Integer.parseInt(mWeightEditText.getText().toString().trim()); }
+        //catch(Exception ex) {}
 
         ContentValues values = new ContentValues();
         values.put(PetContract.PetEntry.COLUMN_PET_NAME, mNameEditText.getText().toString().trim());
@@ -167,25 +234,135 @@ public class EditorActivity extends AppCompatActivity
         values.put(PetContract.PetEntry.COLUMN_PET_WEIGHT, weight);
 
 
-        Uri newPetUri = getContentResolver().insert(PetContract.PetEntry.CONTENT_URI, values);
-
-        if ( newPetUri  == null ) // Insert failed
+        if  (intentUri == null)     // no intent passed, we are adding new pet
         {
-            Log.v(LOG_TAG, "db insert failed!");
-            Toast.makeText(this,R.string.editor_insert_pet_failed,Toast.LENGTH_SHORT).show();
+            Uri newPetUri = getContentResolver().insert(PetContract.PetEntry.CONTENT_URI, values);
+            if (newPetUri != null )
+            {
+                Toast.makeText(this,R.string.pet_saved,Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
-        else
+        else                        // we are updating an existing pet
         {
-            Log.v(LOG_TAG, "Pet Added>ID:" + newPetUri.getLastPathSegment()
-                    + " :'" + mNameEditText.getText().toString().trim()
-                    + "'|'" + mBreedEditText.getText().toString().trim()
-                    + "'|" + mGender
-                    + "|" + weight );
+            int rowsUpdated = getContentResolver().update(intentUri, values, null, null);
+            if (rowsUpdated > 0)
+            {
+                Toast.makeText(this,R.string.pet_updated,Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
 
-            Toast.makeText(this,R.string.pet_saved,Toast.LENGTH_SHORT).show();
-         }
-
-        // check Id
-        // Add toast message
+        // Otherwise the operation has failed, show alert message
+        Toast.makeText(this,R.string.editor_insert_pet_failed,Toast.LENGTH_SHORT).show();
     }
+
+    // ***************************************************
+    // ***  Cursor Loader Callback functions *************
+    // ***************************************************
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args)
+    {
+
+        switch (id)
+        {
+            case PET_FIELD_LOADER:
+                String[] projection = {
+                        PetContract.PetEntry._ID,
+                        PetContract.PetEntry.COLUMN_PET_NAME,
+                        PetContract.PetEntry.COLUMN_PET_BREED,
+                        PetContract.PetEntry.COLUMN_PET_GENDER,
+                        PetContract.PetEntry.COLUMN_PET_WEIGHT   };
+                return new CursorLoader(this, intentUri, projection, null, null, null);
+            default:
+                return null;
+        }
+
+        //return null; // debugging
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor)
+    {
+        // update UI with pet info
+        if ( cursor.moveToFirst() )
+        {
+            String name = cursor.getString(cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_NAME));
+            String breed = cursor.getString(cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_BREED));
+            int gender = cursor.getInt(cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_GENDER));
+            Integer weight = cursor.getInt(cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_WEIGHT));
+
+            //** EditText field to enter the pet's name
+            mNameEditText.setText(name);
+
+            //** EditText field to enter the pet's breed
+            mBreedEditText.setText(breed);
+
+            //** EditText field to enter the pet's weight
+            mWeightEditText.setText(weight.toString());
+
+            //** EditText field to enter the pet's gender
+            mGenderSpinner.setSelection(gender);
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader)
+    {
+        // Clear input fields
+        mNameEditText.setText("");
+        mBreedEditText.setText("");
+        mWeightEditText.setText("0");
+        mGenderSpinner.setSelection(PetContract.PetEntry.GENDER_UNKONWN);
+    }
+
+    private void showUnsavedChangesDialog(DialogInterface.OnClickListener discardButtonClickListener)
+    {
+        // Create an AlertDialog.Builder to prompt if user wants to leave without saving
+        // Set click listeners to get response
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(R.string.unsaved_changes_dialog);
+        builder.setPositiveButton(R.string.discard,discardButtonClickListener);
+        builder.setNegativeButton(R.string.keep_editing, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // User clicked "Keep editing"
+                if (dialog != null )
+                    dialog.dismiss();
+            }
+        });
+
+        // Create and show AlertDialog
+        AlertDialog alert = builder.create();
+        alert.show();
+    }
+
+    @Override
+    public void onBackPressed()
+    {
+        // continue with 'back' action if pet hasnt changed
+        if (!mPetHasChanged) {
+            super.onBackPressed();
+            return;
+        }
+
+        // Otherwise if there are unsaved changes, setup a dialog to warn the user.
+        // Create a click listener to handle the user confirming that changes should be discarded.
+        DialogInterface.OnClickListener discardButtonClickListener =
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // User clicked "Discard" button, close the current activity.
+                        finish();
+                    }
+                };
+
+        // Show dialog that there are unsaved changes
+        showUnsavedChangesDialog(discardButtonClickListener);
+    }
+
+
+
+
+
 }
