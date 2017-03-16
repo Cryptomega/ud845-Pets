@@ -84,7 +84,8 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
     private int mGender = 0;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
 
